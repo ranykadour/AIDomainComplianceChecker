@@ -3,8 +3,19 @@ import { jsPDF } from 'jspdf';
 import './Results.css';
 
 function Results({ result }) {
-    const { domain, url, scanTime, textAnalyzed, analysis, legalPages, cookieInfo, trackingInfo, scannedAt } = result;
+    const { domain, url, scanTime, textAnalyzed, analysis, legalPages, cookieInfo, trackingInfo, copyrightInfo, siteOptions, scannedAt } = result;
     const [activeTab, setActiveTab] = useState('security');
+
+    // Default options if not provided
+    const options = siteOptions || {
+        hasPayments: false,
+        collectsPersonalData: true,
+        usesTracking: true,
+        hasUserAccounts: false,
+        targetsEU: true,
+        targetsUSA: true,
+        hasChildrenContent: false,
+    };
 
     const downloadSecurityPDF = () => {
         const doc = new jsPDF();
@@ -254,8 +265,7 @@ function Results({ result }) {
             { key: 'cookies', label: 'Cookie Policy' },
             { key: 'gdpr', label: 'GDPR Page' },
             { key: 'disclaimer', label: 'Disclaimer' },
-            { key: 'refund', label: 'Refund Policy' },
-            { key: 'dmca', label: 'DMCA/Copyright' }
+            { key: 'refund', label: 'Refund Policy' }
         ];
 
         pageTypes.forEach(({ key, label }) => {
@@ -264,6 +274,14 @@ function Results({ result }) {
             doc.text(`• ${label}: ${status}`, margin, yPos);
             yPos += lineHeight;
         });
+
+        // Copyright notice (detected from page content)
+        const hasCopyright = copyrightInfo?.hasCopyright || copyrightInfo?.hasAllRightsReserved;
+        const copyrightStatus = hasCopyright
+            ? `✓ Found${copyrightInfo?.copyrightYear ? ` (© ${copyrightInfo.copyrightYear})` : ''}`
+            : '✗ Not Found';
+        doc.text(`• Copyright Notice: ${copyrightStatus}`, margin, yPos);
+        yPos += lineHeight;
         yPos += 5;
 
         // Missing Pages
@@ -498,6 +516,20 @@ function Results({ result }) {
                 </div>
             )}
 
+            {/* Active Options Indicator */}
+            <div className="active-options">
+                <span className="options-label">Scan configured for:</span>
+                <div className="options-tags">
+                    {options.collectsPersonalData && <span className="option-tag">Collects Data</span>}
+                    {options.usesTracking && <span className="option-tag">Uses Tracking</span>}
+                    {options.hasPayments && <span className="option-tag">E-commerce</span>}
+                    {options.hasUserAccounts && <span className="option-tag">User Accounts</span>}
+                    {options.targetsEU && <span className="option-tag">EU (GDPR)</span>}
+                    {options.targetsUSA && <span className="option-tag">USA (CCPA)</span>}
+                    {options.hasChildrenContent && <span className="option-tag">Children (COPPA)</span>}
+                </div>
+            </div>
+
             {/* Tab Navigation */}
             <div className="tab-nav">
                 <button
@@ -550,60 +582,62 @@ function Results({ result }) {
                         />
                     </div>
 
-                    {/* Tracking Details */}
-                    <div className="tracking-section">
-                        <h4>📊 Tracking & Data Collection</h4>
-                        <div className="tracking-grid">
-                            <div className="tracking-card">
-                                <h5>Analytics Tools</h5>
-                                {trackingInfo?.analytics?.length > 0 ? (
-                                    <ul>
-                                        {trackingInfo.analytics.map((tool, i) => (
-                                            <li key={i}>{tool}</li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="no-items">None detected</p>
-                                )}
-                            </div>
-                            <div className="tracking-card">
-                                <h5>Advertising Networks</h5>
-                                {trackingInfo?.advertising?.length > 0 ? (
-                                    <ul>
-                                        {trackingInfo.advertising.map((tool, i) => (
-                                            <li key={i}>{tool}</li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="no-items">None detected</p>
-                                )}
-                            </div>
-                            <div className="tracking-card">
-                                <h5>Social Media Widgets</h5>
-                                {trackingInfo?.socialMedia?.length > 0 ? (
-                                    <ul>
-                                        {trackingInfo.socialMedia.map((tool, i) => (
-                                            <li key={i}>{tool}</li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="no-items">None detected</p>
-                                )}
-                            </div>
-                            <div className="tracking-card">
-                                <h5>Data Collection Points</h5>
-                                {trackingInfo?.dataCollection?.length > 0 ? (
-                                    <ul>
-                                        {trackingInfo.dataCollection.map((point, i) => (
-                                            <li key={i}>{point}</li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="no-items">None detected</p>
-                                )}
+                    {/* Tracking Details - only show if site uses tracking */}
+                    {options.usesTracking && (
+                        <div className="tracking-section">
+                            <h4>📊 Tracking & Data Collection</h4>
+                            <div className="tracking-grid">
+                                <div className="tracking-card">
+                                    <h5>Analytics Tools</h5>
+                                    {trackingInfo?.analytics?.length > 0 ? (
+                                        <ul>
+                                            {trackingInfo.analytics.map((tool, i) => (
+                                                <li key={i}>{tool}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="no-items">None detected</p>
+                                    )}
+                                </div>
+                                <div className="tracking-card">
+                                    <h5>Advertising Networks</h5>
+                                    {trackingInfo?.advertising?.length > 0 ? (
+                                        <ul>
+                                            {trackingInfo.advertising.map((tool, i) => (
+                                                <li key={i}>{tool}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="no-items">None detected</p>
+                                    )}
+                                </div>
+                                <div className="tracking-card">
+                                    <h5>Social Media Widgets</h5>
+                                    {trackingInfo?.socialMedia?.length > 0 ? (
+                                        <ul>
+                                            {trackingInfo.socialMedia.map((tool, i) => (
+                                                <li key={i}>{tool}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="no-items">None detected</p>
+                                    )}
+                                </div>
+                                <div className="tracking-card">
+                                    <h5>Data Collection Points</h5>
+                                    {trackingInfo?.dataCollection?.length > 0 ? (
+                                        <ul>
+                                            {trackingInfo.dataCollection.map((point, i) => (
+                                                <li key={i}>{point}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="no-items">None detected</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {analysis.security?.recommendations?.length > 0 && (
                         <div className="recommendations-section">
@@ -638,14 +672,13 @@ function Results({ result }) {
                         <h4>📄 Legal Pages Status</h4>
                         <div className="legal-pages-grid">
                             {[
-                                { key: 'privacy', label: 'Privacy Policy', icon: '🔒' },
-                                { key: 'terms', label: 'Terms of Service', icon: '📜' },
-                                { key: 'cookies', label: 'Cookie Policy', icon: '🍪' },
-                                { key: 'gdpr', label: 'GDPR Page', icon: '🇪🇺' },
-                                { key: 'disclaimer', label: 'Disclaimer', icon: '⚠️' },
-                                { key: 'refund', label: 'Refund Policy', icon: '💰' },
-                                { key: 'dmca', label: 'DMCA/Copyright', icon: '©️' }
-                            ].map(({ key, label, icon }) => (
+                                { key: 'privacy', label: 'Privacy Policy', icon: '🔒', show: options.collectsPersonalData },
+                                { key: 'terms', label: 'Terms of Service', icon: '📜', show: true },
+                                { key: 'cookies', label: 'Cookie Policy', icon: '🍪', show: options.usesTracking },
+                                { key: 'gdpr', label: 'GDPR Page', icon: '🇪🇺', show: options.targetsEU },
+                                { key: 'disclaimer', label: 'Disclaimer', icon: '⚠️', show: true },
+                                { key: 'refund', label: 'Refund Policy', icon: '💰', show: options.hasPayments }
+                            ].filter(item => item.show).map(({ key, label, icon }) => (
                                 <div key={key} className={`legal-page-item ${legalPages?.[key]?.found ? 'found' : 'missing'}`}>
                                     <span className="page-icon">{icon}</span>
                                     <span className="page-label">{label}</span>
@@ -658,45 +691,59 @@ function Results({ result }) {
                                     </span>
                                 </div>
                             ))}
+                            {/* Copyright Notice - detected from page content, not a separate page */}
+                            <div className={`legal-page-item ${copyrightInfo?.hasCopyright || copyrightInfo?.hasAllRightsReserved ? 'found' : 'missing'}`}>
+                                <span className="page-icon">©️</span>
+                                <span className="page-label">Copyright Notice</span>
+                                <span className="page-status">
+                                    {copyrightInfo?.hasCopyright || copyrightInfo?.hasAllRightsReserved ? (
+                                        <span>✓ {copyrightInfo.copyrightYear ? `© ${copyrightInfo.copyrightYear}` : 'Found'}</span>
+                                    ) : (
+                                        '✗ Missing'
+                                    )}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Cookie Compliance */}
-                    <div className="cookie-compliance-section">
-                        <h4>🍪 Cookie Compliance</h4>
-                        <div className="cookie-status">
-                            <div className={`cookie-item ${cookieInfo?.hasCookieBanner ? 'good' : 'bad'}`}>
-                                <span>Cookie Banner</span>
-                                <span>{cookieInfo?.hasCookieBanner ? '✓ Detected' : '✗ Not Found'}</span>
-                            </div>
-                            <div className={`cookie-item ${cookieInfo?.hasCookieConsent ? 'good' : 'bad'}`}>
-                                <span>Consent Mechanism</span>
-                                <span>{cookieInfo?.hasCookieConsent ? '✓ Present' : '✗ Not Found'}</span>
-                            </div>
-                            {cookieInfo?.consentMechanism && (
-                                <div className="cookie-item neutral">
-                                    <span>Platform</span>
-                                    <span>{cookieInfo.consentMechanism}</span>
+                    {/* Cookie Compliance - only show if site uses tracking */}
+                    {options.usesTracking && (
+                        <div className="cookie-compliance-section">
+                            <h4>🍪 Cookie Compliance</h4>
+                            <div className="cookie-status">
+                                <div className={`cookie-item ${cookieInfo?.hasCookieBanner ? 'good' : 'bad'}`}>
+                                    <span>Cookie Banner</span>
+                                    <span>{cookieInfo?.hasCookieBanner ? '✓ Detected' : '✗ Not Found'}</span>
                                 </div>
-                            )}
-                            {cookieInfo?.cookieTypes?.length > 0 && (
-                                <div className="cookie-item neutral">
-                                    <span>Cookie Categories</span>
-                                    <span>{cookieInfo.cookieTypes.join(', ')}</span>
+                                <div className={`cookie-item ${cookieInfo?.hasCookieConsent ? 'good' : 'bad'}`}>
+                                    <span>Consent Mechanism</span>
+                                    <span>{cookieInfo?.hasCookieConsent ? '✓ Present' : '✗ Not Found'}</span>
+                                </div>
+                                {cookieInfo?.consentMechanism && (
+                                    <div className="cookie-item neutral">
+                                        <span>Platform</span>
+                                        <span>{cookieInfo.consentMechanism}</span>
+                                    </div>
+                                )}
+                                {cookieInfo?.cookieTypes?.length > 0 && (
+                                    <div className="cookie-item neutral">
+                                        <span>Cookie Categories</span>
+                                        <span>{cookieInfo.cookieTypes.join(', ')}</span>
+                                    </div>
+                                )}
+                            </div>
+                            {analysis.legal?.cookie_compliance?.issues?.length > 0 && (
+                                <div className="cookie-issues">
+                                    <h5>Issues:</h5>
+                                    <ul>
+                                        {analysis.legal.cookie_compliance.issues.map((issue, i) => (
+                                            <li key={i}>{issue}</li>
+                                        ))}
+                                    </ul>
                                 </div>
                             )}
                         </div>
-                        {analysis.legal?.cookie_compliance?.issues?.length > 0 && (
-                            <div className="cookie-issues">
-                                <h5>Issues:</h5>
-                                <ul>
-                                    {analysis.legal.cookie_compliance.issues.map((issue, i) => (
-                                        <li key={i}>{issue}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
+                    )}
 
                     {/* Compliance Issues Grid */}
                     <div className="results-grid">
@@ -708,7 +755,7 @@ function Results({ result }) {
                                 type="missing"
                             />
                         )}
-                        {analysis.legal?.gdpr_issues?.length > 0 && (
+                        {options.targetsEU && analysis.legal?.gdpr_issues?.length > 0 && (
                             <ResultCard
                                 title="GDPR Compliance Issues"
                                 icon="🇪🇺"
@@ -716,7 +763,7 @@ function Results({ result }) {
                                 type="gdpr"
                             />
                         )}
-                        {analysis.legal?.ccpa_issues?.length > 0 && (
+                        {options.targetsUSA && analysis.legal?.ccpa_issues?.length > 0 && (
                             <ResultCard
                                 title="CCPA Compliance Issues"
                                 icon="🇺🇸"
@@ -724,7 +771,7 @@ function Results({ result }) {
                                 type="ccpa"
                             />
                         )}
-                        {analysis.legal?.privacy_policy_issues?.length > 0 && (
+                        {options.collectsPersonalData && analysis.legal?.privacy_policy_issues?.length > 0 && (
                             <ResultCard
                                 title="Privacy Policy Issues"
                                 icon="🔒"

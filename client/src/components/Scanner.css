@@ -113,6 +113,110 @@
     cursor: not-allowed;
 }
 
+/* Options Toggle */
+.options-toggle {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.toggle-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--gray-700);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.5rem 0;
+    transition: color 0.2s;
+}
+
+.toggle-button:hover {
+    color: var(--primary);
+}
+
+.toggle-icon {
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+}
+
+.toggle-icon.open {
+    transform: rotate(90deg);
+}
+
+.toggle-hint {
+    color: var(--gray-400);
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+/* Website Options */
+.website-options {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--gray-50);
+    border-radius: 12px;
+    border: 1px solid var(--gray-200);
+}
+
+.options-description {
+    margin: 0 0 1rem 0;
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.75rem;
+}
+
+.option-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.option-item:hover {
+    border-color: var(--primary);
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1);
+}
+
+.option-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.option-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.option-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+.option-desc {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
     .scanner {
@@ -125,5 +229,9 @@
 
     .scan-button {
         width: 100%;
+    }
+
+    .options-grid {
+        grid-template-columns: 1fr;
     }
 }

@@ -104,6 +104,39 @@
     color: var(--gray-700);
 }
 
+/* Active Options */
+.active-options {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--gray-50);
+    border-radius: 8px;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.options-label {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+    font-weight: 500;
+}
+
+.options-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.option-tag {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
 /* Tab Navigation */
 .tab-nav {
     display: flex;

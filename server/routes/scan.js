@@ -12,7 +12,7 @@ const router = express.Router();
 router.post('/', async (req, res) => {
     try {
         console.log('Received scan request:', req.body);
-        const { domain } = req.body;
+        const { domain, siteOptions } = req.body;
 
         if (!domain) {
             return res.status(400).json({
@@ -51,10 +51,23 @@ router.post('/', async (req, res) => {
             cleanDomain,
             legalPages,
             extraction.cookieInfo,
-            extraction.trackingInfo
+            extraction.trackingInfo,
+            siteOptions
         );
 
         const endTime = Date.now();
+
+        // Default site options
+        const defaultOptions = {
+            hasPayments: false,
+            collectsPersonalData: true,
+            usesTracking: true,
+            hasUserAccounts: false,
+            targetsEU: true,
+            targetsUSA: true,
+            hasChildrenContent: false,
+        };
+        const finalSiteOptions = { ...defaultOptions, ...siteOptions };
 
         // Return results
         res.json({
@@ -72,6 +85,8 @@ router.post('/', async (req, res) => {
             ),
             cookieInfo: extraction.cookieInfo,
             trackingInfo: extraction.trackingInfo,
+            copyrightInfo: extraction.copyrightInfo,
+            siteOptions: finalSiteOptions,
             scannedAt: new Date().toISOString()
         });
 

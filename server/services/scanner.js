@@ -8,6 +8,7 @@ import {
     extractTextFromHtml,
     extractCookieInfo,
     extractTrackingInfo,
+    extractCopyrightInfo,
     findLegalLinksInHtml,
     extractLegalPageText
 } from '../utils/htmlParser.js';
@@ -87,6 +88,7 @@ export async function fetchAndExtractText(domain) {
             // Extract additional info
             const cookieInfo = extractCookieInfo(html);
             const trackingInfo = extractTrackingInfo(html);
+            const copyrightInfo = extractCopyrightInfo(html);
 
             return {
                 success: true,
@@ -95,7 +97,8 @@ export async function fetchAndExtractText(domain) {
                 textLength: Math.min(cleanedText.length, MAX_TEXT_LENGTH),
                 html: html,
                 cookieInfo,
-                trackingInfo
+                trackingInfo,
+                copyrightInfo
             };
 
         } catch (error) {

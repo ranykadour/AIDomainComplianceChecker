@@ -11,10 +11,10 @@ export const USER_AGENTS = [
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
 ];
 
-// Common paths for legal pages
+// Common paths for legal pages (English URLs only)
 export const LEGAL_PAGE_PATHS = {
     privacy: ['/privacy', '/privacy-policy', '/privacypolicy', '/privacy.html', '/legal/privacy', '/about/privacy'],
-    terms: ['/terms', '/terms-of-service', '/tos', '/terms-and-conditions', '/termsofservice', '/legal/terms', '/terms.html'],
+    terms: ['/terms', '/terms-of-service', '/tos', '/terms-and-conditions', '/termsofservice', '/legal/terms', '/terms.html', '/tnaim'],
     cookies: ['/cookies', '/cookie-policy', '/cookiepolicy', '/cookies.html', '/legal/cookies'],
     gdpr: ['/gdpr', '/gdpr-compliance', '/data-protection'],
     disclaimer: ['/disclaimer', '/legal-disclaimer', '/legal/disclaimer'],
@@ -22,11 +22,23 @@ export const LEGAL_PAGE_PATHS = {
     dmca: ['/dmca', '/copyright', '/dmca-policy']
 };
 
-// Cookie banner detection patterns
+// Hebrew text patterns for legal pages (used for link text detection)
+export const HEBREW_LEGAL_PATTERNS = {
+    privacy: ['פרטיות', 'מדיניות פרטיות', 'הגנת פרטיות', 'privacy'],
+    terms: ['תנאי שימוש', 'תנאים', 'תקנון', 'תנאי השירות', 'תנאים והגבלות', 'terms'],
+    cookies: ['עוגיות', 'מדיניות עוגיות', 'קוקיז', 'cookies'],
+    gdpr: ['הגנת מידע', 'gdpr', 'הגנה על נתונים'],
+    disclaimer: ['הצהרה', 'כתב ויתור', 'הגבלת אחריות', 'disclaimer'],
+    refund: ['החזרות', 'מדיניות החזרות', 'ביטולים', 'מדיניות ביטולים', 'refund', 'returns'],
+    dmca: ['זכויות יוצרים', 'dmca', 'קניין רוחני']
+};
+
+// Cookie banner detection patterns (English and Hebrew)
 export const COOKIE_BANNER_PATTERNS = [
     'cookie-banner', 'cookie-consent', 'cookie-notice', 'cookie-popup',
     'gdpr-banner', 'consent-banner', 'privacy-banner', 'cookieconsent',
-    'cc-banner', 'onetrust', 'cookiebot', 'trustarc', 'quantcast'
+    'cc-banner', 'onetrust', 'cookiebot', 'trustarc', 'quantcast',
+    'עוגיות', 'הסכמה לעוגיות', 'מדיניות עוגיות'
 ];
 
 // Cookie types patterns

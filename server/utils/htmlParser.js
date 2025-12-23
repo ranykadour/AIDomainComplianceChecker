@@ -6,7 +6,8 @@ import {
     COOKIE_TYPES_PATTERNS,
     ANALYTICS_PATTERNS,
     ADVERTISING_PATTERNS,
-    SOCIAL_PATTERNS
+    SOCIAL_PATTERNS,
+    HEBREW_LEGAL_PATTERNS
 } from './constants.js';
 
 /**
@@ -45,7 +46,7 @@ export function extractTextFromHtml(html) {
     // Combine all text
     const fullText = `${title}\n${metaDesc}\n${ogDesc}\n${textContent}`;
 
-    // Clean up the text
+    // Clean up the text (preserve Hebrew characters: \u0590-\u05FF)
     const cleanedText = fullText
         .replace(/&nbsp;/g, ' ')
         .replace(/&amp;/g, '&')
@@ -56,7 +57,7 @@ export function extractTextFromHtml(html) {
         .replace(/&[a-z]+;/gi, ' ')
         .replace(/\s+/g, ' ')
         .replace(/\n+/g, '\n')
-        .replace(/[^\x20-\x7E\n]/g, '')
+        .replace(/[^\x20-\x7E\n\u0590-\u05FF]/g, '')
         .trim();
 
     return cleanedText;
@@ -82,8 +83,12 @@ export function extractCookieInfo(html) {
         }
     }
 
-    // Check for consent mechanisms
-    if (lowerHtml.includes('accept all') || lowerHtml.includes('accept cookies') || lowerHtml.includes('i agree')) {
+    // Check for consent mechanisms (English and Hebrew)
+    const consentPhrases = [
+        'accept all', 'accept cookies', 'i agree',
+        'אני מסכים', 'אישור', 'קבל הכל', 'אשר עוגיות', 'מסכים לתנאים'
+    ];
+    if (consentPhrases.some(phrase => html.includes(phrase) || lowerHtml.includes(phrase))) {
         cookieInfo.hasCookieConsent = true;
     }
 
@@ -159,20 +164,25 @@ export function extractTrackingInfo(html) {
         }
     }
 
-    // Data collection indicators
-    if (lowerHtml.includes('newsletter') || lowerHtml.includes('subscribe')) {
+    // Data collection indicators (English and Hebrew)
+    if (lowerHtml.includes('newsletter') || lowerHtml.includes('subscribe') ||
+        html.includes('ניוזלטר') || html.includes('הרשמה לעדכונים') || html.includes('דיוור')) {
         trackingInfo.dataCollection.push('Newsletter/Email subscription');
     }
-    if (lowerHtml.includes('contact form') || lowerHtml.includes('contact us')) {
+    if (lowerHtml.includes('contact form') || lowerHtml.includes('contact us') ||
+        html.includes('צור קשר') || html.includes('טופס יצירת קשר')) {
         trackingInfo.dataCollection.push('Contact forms');
     }
-    if (lowerHtml.includes('create account') || lowerHtml.includes('sign up') || lowerHtml.includes('register')) {
+    if (lowerHtml.includes('create account') || lowerHtml.includes('sign up') || lowerHtml.includes('register') ||
+        html.includes('הרשמה') || html.includes('צור חשבון') || html.includes('הירשם')) {
         trackingInfo.dataCollection.push('User registration');
     }
-    if (lowerHtml.includes('checkout') || lowerHtml.includes('payment')) {
+    if (lowerHtml.includes('checkout') || lowerHtml.includes('payment') ||
+        html.includes('תשלום') || html.includes('קופה') || html.includes('סיום הזמנה')) {
         trackingInfo.dataCollection.push('Payment processing');
     }
-    if (lowerHtml.includes('chat') || lowerHtml.includes('intercom') || lowerHtml.includes('zendesk') || lowerHtml.includes('crisp')) {
+    if (lowerHtml.includes('chat') || lowerHtml.includes('intercom') || lowerHtml.includes('zendesk') || lowerHtml.includes('crisp') ||
+        html.includes("צ'אט") || html.includes('תמיכה')) {
         trackingInfo.dataCollection.push('Live chat/Support widgets');
     }
 
@@ -180,29 +190,125 @@ export function extractTrackingInfo(html) {
 }
 
 /**
- * Find legal page links in the HTML
+ * Extract copyright information from HTML
+ */
+export function extractCopyrightInfo(html) {
+    const copyrightInfo = {
+        hasCopyright: false,
+        hasAllRightsReserved: false,
+        copyrightYear: null,
+        copyrightHolder: null,
+        details: []
+    };
+
+    // Look for copyright in footer specifically, then fall back to full HTML
+    const $ = cheerio.load(html);
+    const footerHtml = $('footer').html() || '';
+    const footerText = $('footer').text() || '';
+    const fullText = $('body').text() || '';
+
+    // Combined text to search (prioritize footer)
+    const searchText = footerText + ' ' + fullText;
+    const searchHtml = footerHtml + ' ' + html;
+
+    // Copyright symbol patterns
+    const copyrightSymbolPatterns = [
+        /©/,                           // © symbol
+        /&copy;/i,                     // HTML entity
+        /\(c\)/i,                      // (c) or (C)
+        /copyright/i                   // word "copyright"
+    ];
+
+    // All rights reserved patterns (English and Hebrew)
+    const allRightsPatterns = [
+        /all\s*rights\s*reserved/i,           // English
+        /כל\s*הזכויות\s*שמורות/,              // Hebrew: כל הזכויות שמורות
+        /זכויות\s*שמורות/,                    // Hebrew: זכויות שמורות
+        /כל\s*הזכויות\s*מוגנות/,              // Hebrew: כל הזכויות מוגנות
+        /©.*\d{4}/,                           // © with year
+        /\d{4}.*©/                            // Year with ©
+    ];
+
+    // Check for copyright symbol
+    for (const pattern of copyrightSymbolPatterns) {
+        if (pattern.test(searchHtml) || pattern.test(searchText)) {
+            copyrightInfo.hasCopyright = true;
+            copyrightInfo.details.push('Copyright notice found');
+            break;
+        }
+    }
+
+    // Check for "all rights reserved"
+    for (const pattern of allRightsPatterns) {
+        if (pattern.test(searchText)) {
+            copyrightInfo.hasAllRightsReserved = true;
+            copyrightInfo.details.push('All rights reserved notice found');
+            break;
+        }
+    }
+
+    // Try to extract copyright year
+    const yearMatch = searchText.match(/(?:©|copyright|\(c\))\s*(\d{4})/i) ||
+        searchText.match(/(\d{4})\s*(?:©|copyright)/i);
+    if (yearMatch) {
+        copyrightInfo.copyrightYear = yearMatch[1];
+    }
+
+    // Check in footer text specifically for better detection
+    if (footerText) {
+        if (/©|copyright|\(c\)|כל הזכויות|זכויות שמורות/i.test(footerText)) {
+            copyrightInfo.hasCopyright = true;
+            if (!copyrightInfo.details.includes('Copyright notice found')) {
+                copyrightInfo.details.push('Copyright in footer');
+            }
+        }
+    }
+
+    return copyrightInfo;
+}
+
+/**
+ * Find legal page links in the HTML (supports English, German, and Hebrew)
  */
 export function findLegalLinksInHtml(html, baseUrl) {
     const links = {};
     const base = new URL(baseUrl);
     const $ = cheerio.load(html);
 
+    // URL/href patterns (regex for path matching)
     const patterns = {
-        privacy: /privacy|datenschutz/i,
-        terms: /terms|tos|conditions|agb/i,
-        cookies: /cookie/i,
-        gdpr: /gdpr|dsgvo|data-protection/i,
-        disclaimer: /disclaimer|impressum/i
+        privacy: /privacy|datenschutz|prtiyut|פרטיות/i,
+        terms: /terms|tos|conditions|agb|tnaim|תנאי|תקנון/i,
+        cookies: /cookie|עוגיות|קוקיז/i,
+        gdpr: /gdpr|dsgvo|data-protection|הגנת-מידע/i,
+        disclaimer: /disclaimer|impressum|הצהרה|ויתור/i,
+        refund: /refund|return|ביטול|החזר/i,
+        dmca: /dmca|copyright|זכויות-יוצרים/i
     };
+
+    /**
+     * Check if text matches Hebrew legal patterns
+     */
+    function matchesHebrewPattern(text, type) {
+        const hebrewPatterns = HEBREW_LEGAL_PATTERNS[type];
+        if (!hebrewPatterns) return false;
+        return hebrewPatterns.some(pattern => text.includes(pattern));
+    }
 
     $('a').each((_, elem) => {
         const href = $(elem).attr('href');
-        const text = $(elem).text().toLowerCase();
+        const text = $(elem).text().trim();
+        const lowerText = text.toLowerCase();
 
         if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
 
         for (const [type, pattern] of Object.entries(patterns)) {
-            if (pattern.test(href) || pattern.test(text)) {
+            // Check URL pattern, lowercase text pattern, or Hebrew text pattern
+            const matchesUrl = pattern.test(href);
+            const matchesText = pattern.test(lowerText);
+            const matchesHebrew = matchesHebrewPattern(text, type);
+
+            if (matchesUrl || matchesText || matchesHebrew) {
                 if (!links[type]) {
                     let fullUrl = href;
                     if (href.startsWith('/')) {

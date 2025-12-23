@@ -3,7 +3,18 @@ import Groq from 'groq-sdk';
 /**
  * AI Analysis Prompt - System message for legal compliance analysis
  */
-const SYSTEM_PROMPT = `You are a legal compliance and data privacy expert analyst. Analyze websites for GDPR, CCPA, and general legal compliance. You must evaluate:
+const SYSTEM_PROMPT = `You are a legal compliance and data privacy expert analyst. Analyze websites for GDPR, CCPA, and general legal compliance.
+
+IMPORTANT: The user will provide "WEBSITE CONTEXT" that describes what features their website has. Use this to adjust your analysis:
+- If the site does NOT accept payments (hasPayments: false), do NOT penalize for missing refund/return policies
+- If the site does NOT collect personal data (collectsPersonalData: false), be lenient on privacy policy requirements
+- If the site does NOT use tracking (usesTracking: false), do NOT penalize for missing cookie consent/policy
+- If the site does NOT have user accounts (hasUserAccounts: false), do NOT require account-related policies
+- If the site does NOT target EU (targetsEU: false), GDPR compliance is NOT required
+- If the site does NOT target USA (targetsUSA: false), CCPA compliance is NOT required
+- If children cannot use the site (hasChildrenContent: false), COPPA compliance is NOT required
+
+You must evaluate based on what actually applies:
 
 1. SECURITY ANALYSIS:
    - Personal data exposure (emails, phones, IDs, names, addresses visible on pages)
@@ -11,13 +22,13 @@ const SYSTEM_PROMPT = `You are a legal compliance and data privacy expert analys
    - Security headers and HTTPS usage
    - Third-party script risks
 
-2. LEGAL COMPLIANCE ANALYSIS:
+2. LEGAL COMPLIANCE ANALYSIS (adjusted based on website context):
    - Presence and completeness of legal pages (Privacy Policy, Terms of Service, Cookie Policy)
-   - GDPR compliance (consent mechanisms, data rights, DPO contact, lawful basis)
-   - CCPA compliance (Do Not Sell link, consumer rights)
-   - Cookie compliance (consent banner, cookie categorization, opt-out options)
-   - E-commerce compliance (refund policy, return policy, shipping info)
-   - Copyright/DMCA notices
+   - GDPR compliance (only if targeting EU)
+   - CCPA compliance (only if targeting USA)
+   - Cookie compliance (only if using tracking/cookies)
+   - E-commerce compliance (only if accepting payments)
+   - Copyright notice (just needs © symbol, "All rights reserved", or Hebrew "כל הזכויות שמורות" in footer - does NOT need a separate page)
 
 3. LEGAL PAGE QUALITY CHECK (for each found legal page):
    - Check if Privacy Policy includes: data collection practices, data sharing, retention periods, user rights, contact info
@@ -62,7 +73,7 @@ Respond ONLY with valid JSON in this exact format:
 /**
  * Build the user prompt for AI analysis
  */
-function buildUserPrompt(text, domain, legalPages, cookieInfo, trackingInfo) {
+function buildUserPrompt(text, domain, legalPages, cookieInfo, trackingInfo, siteOptions) {
     // Prepare legal pages summary
     const legalSummary = Object.entries(legalPages)
         .map(([type, data]) => `${type}: ${data.found ? 'Found' : 'Not Found'}`)
@@ -81,9 +92,32 @@ function buildUserPrompt(text, domain, legalPages, cookieInfo, trackingInfo) {
         .map(([type, data]) => `=== ${type.toUpperCase()} PAGE ===\n${data.text.substring(0, 3000)}`)
         .join('\n\n');
 
+    // Prepare website context from options
+    const defaultOptions = {
+        hasPayments: false,
+        collectsPersonalData: true,
+        usesTracking: true,
+        hasUserAccounts: false,
+        targetsEU: true,
+        targetsUSA: true,
+        hasChildrenContent: false,
+    };
+    const options = { ...defaultOptions, ...siteOptions };
+
+    const websiteContext = `
+WEBSITE CONTEXT (use this to adjust compliance requirements):
+- Accepts payments / E-commerce: ${options.hasPayments ? 'Yes' : 'No'}
+- Collects personal data: ${options.collectsPersonalData ? 'Yes' : 'No'}
+- Uses analytics/tracking: ${options.usesTracking ? 'Yes' : 'No'}
+- Has user accounts: ${options.hasUserAccounts ? 'Yes' : 'No'}
+- Targets EU visitors (GDPR): ${options.targetsEU ? 'Yes' : 'No'}
+- Targets US visitors (CCPA): ${options.targetsUSA ? 'Yes' : 'No'}
+- Children may use site (COPPA): ${options.hasChildrenContent ? 'Yes' : 'No'}`;
+
     return `Analyze this website for legal compliance and security:
 
 DOMAIN: ${domain}
+${websiteContext}
 
 HOMEPAGE CONTENT:
 ${text}
@@ -103,7 +137,7 @@ ${legalTexts ? `\nLEGAL PAGE CONTENTS:\n${legalTexts}` : '\nNo legal pages found
 /**
  * Analyzes website using Groq API
  */
-export async function analyzeWithAI(text, domain, legalPages, cookieInfo, trackingInfo) {
+export async function analyzeWithAI(text, domain, legalPages, cookieInfo, trackingInfo, siteOptions) {
     const apiKey = process.env.GROQ_API_KEY;
 
     // Require API key
@@ -118,7 +152,7 @@ export async function analyzeWithAI(text, domain, legalPages, cookieInfo, tracki
             model: 'llama-3.3-70b-versatile',
             messages: [
                 { role: 'system', content: SYSTEM_PROMPT },
-                { role: 'user', content: buildUserPrompt(text, domain, legalPages, cookieInfo, trackingInfo) }
+                { role: 'user', content: buildUserPrompt(text, domain, legalPages, cookieInfo, trackingInfo, siteOptions) }
             ],
             temperature: 0.3,
             max_tokens: 2000

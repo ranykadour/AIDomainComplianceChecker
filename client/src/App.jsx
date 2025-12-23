@@ -9,13 +9,13 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const handleScan = async (domain) => {
+    const handleScan = async (domain, siteOptions) => {
         setIsLoading(true);
         setError(null);
         setScanResult(null);
 
         try {
-            const response = await axios.post('/api/scan', { domain });
+            const response = await axios.post('/api/scan', { domain, siteOptions });
             setScanResult(response.data);
         } catch (err) {
             setError(err.response?.data?.message || err.message || 'An error occurred while scanning');
