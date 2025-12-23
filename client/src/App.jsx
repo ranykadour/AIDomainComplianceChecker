@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 import Scanner from './components/Scanner';
 import Results from './components/Results';
 import './App.css';
@@ -14,23 +15,10 @@ function App() {
         setScanResult(null);
 
         try {
-            const response = await fetch('/api/scan', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ domain }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Scan failed');
-            }
-
-            setScanResult(data);
+            const response = await axios.post('/api/scan', { domain });
+            setScanResult(response.data);
         } catch (err) {
-            setError(err.message || 'An error occurred while scanning');
+            setError(err.response?.data?.message || err.message || 'An error occurred while scanning');
         } finally {
             setIsLoading(false);
         }
@@ -44,10 +32,10 @@ function App() {
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                         <path d="M9 12l2 2 4-4"></path>
                     </svg>
-                    <h1>AI Domain Compliance Checker</h1>
+                    <h1>Website Legal Compliance Checker</h1>
                 </div>
                 <p className="subtitle">
-                    Scan websites for data privacy issues and compliance risks
+                    Check if your website is legally compliant - Privacy Policy, Terms of Service, GDPR, Cookies & more
                 </p>
             </header>
 

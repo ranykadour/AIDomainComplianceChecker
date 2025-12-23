@@ -1,27 +1,46 @@
-# AI-Powered Domain Compliance & Data Leak Checker
+# Website Legal Compliance Checker
 
-A demo web application that scans websites for data privacy issues, potential data leaks, and compliance risks using AI analysis.
+A comprehensive web application that scans websites for legal compliance issues, data privacy concerns, GDPR/CCPA compliance, and security risks using AI analysis.
 
 ![Demo Screenshot](docs/screenshot.png)
 
 ## 🎯 Features
 
-- **Domain Scanning**: Enter any domain to scan its homepage
-- **Text Extraction**: Automatically extracts visible text content (strips scripts/styles)
-- **AI Analysis**: Uses OpenAI GPT to analyze content for:
-  - Personal data exposure (emails, phone numbers, IDs)
-  - Potential data leaks (API keys, passwords, internal data)
-  - Legal/compliance issues (privacy policy, copyright)
-  - Overall risk level assessment (Low/Medium/High)
-- **Mock Mode**: Works without an OpenAI API key using pattern-based analysis
-- **Clean UI**: Modern, responsive interface
+### Legal Compliance Analysis
+
+- **Legal Page Detection**: Automatically finds and analyzes Privacy Policy, Terms of Service, Cookie Policy, GDPR pages, Disclaimers, Refund Policy, and DMCA/Copyright pages
+- **Privacy Policy Analysis**: Checks for required elements (data collection, sharing, retention, user rights, contact info, children's privacy)
+- **Terms of Service Analysis**: Validates acceptance terms, liability limits, termination clauses, dispute resolution, IP rights
+- **GDPR Compliance**: Checks for consent mechanisms, data subject rights, DPO contact information
+- **CCPA Compliance**: Detects "Do Not Sell" links and consumer rights disclosures
+- **Cookie Compliance**: Detects cookie banners, consent mechanisms, and cookie categorization
+
+### Security Analysis
+
+- **Personal Data Exposure**: Detects exposed emails, phone numbers, IDs, names, addresses
+- **Data Leak Detection**: Finds API keys, passwords, internal data, debug information
+- **Third-Party Risk Assessment**: Analyzes trackers, advertising networks, social widgets
+
+### Tracking & Data Collection Analysis
+
+- **Analytics Tools**: Detects Google Analytics, Mixpanel, Hotjar, Segment, and more
+- **Advertising Networks**: Identifies Google Ads, Facebook Pixel, LinkedIn Ads, Criteo, etc.
+- **Social Media Widgets**: Finds Facebook, Twitter, LinkedIn, Pinterest embeds
+- **Data Collection Points**: Identifies newsletters, forms, registration, payment processing, live chat
+
+### Reports & Export
+
+- **Separate PDF Reports**: Download dedicated Security Report or Legal Compliance Report
+- **Scoring System**: Get numerical scores (0-100) for both security and legal compliance
+- **Actionable Recommendations**: Receive specific suggestions to improve compliance
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: Vite + React (JavaScript)
 - **Backend**: Node.js + Express
-- **AI**: OpenAI API (with mock fallback)
+- **AI**: Groq API with Llama 3.3
 - **Web Scraping**: Cheerio + Axios
+- **PDF Generation**: jsPDF
 
 ## 📁 Project Structure
 
@@ -31,7 +50,7 @@ A demo web application that scans websites for data privacy issues, potential da
 │   │   ├── components/
 │   │   │   ├── Scanner.jsx    # Domain input form
 │   │   │   ├── Scanner.css
-│   │   │   ├── Results.jsx    # Results display
+│   │   │   ├── Results.jsx    # Tabbed results (Security/Legal)
 │   │   │   └── Results.css
 │   │   ├── App.jsx
 │   │   ├── App.css
@@ -42,11 +61,15 @@ A demo web application that scans websites for data privacy issues, potential da
 │
 ├── server/                 # Express backend
 │   ├── services/
-│   │   ├── scanner.js      # Domain fetching & text extraction
-│   │   └── ai.js           # OpenAI integration & mock analysis
+│   │   ├── scanner.js      # Domain fetching, legal page detection
+│   │   └── ai.js           # Groq API integration
 │   ├── index.js            # Express server
 │   ├── .env.example        # Environment variables template
 │   └── package.json
+│
+├── api/                    # Vercel serverless functions
+│   ├── scan.js             # Main scan endpoint
+│   └── health.js           # Health check endpoint
 │
 ├── package.json            # Root package.json with dev scripts
 └── README.md
@@ -73,7 +96,7 @@ A demo web application that scans websites for data privacy issues, potential da
    npm run install:all
    ```
 
-3. **(Optional) Configure OpenAI API:**
+3. **(Optional) Configure Groq API:**
 
    ```bash
    cd server
@@ -163,7 +186,7 @@ Health check endpoint.
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `OPENAI_API_KEY` | Your OpenAI API key | No (uses mock if missing) |
+| `GROQ_API_KEY` | Your Groq API key | Yes |
 | `PORT` | Server port | No (defaults to 3001) |
 
 ## 📋 Sample Output
@@ -199,7 +222,6 @@ Health check endpoint.
 ## 🔒 Security Notes
 
 - Never expose API keys in client-side code
-- The mock analyzer uses simple pattern matching (not secure analysis)
 - Some websites may block automated requests
 - Always respect robots.txt and website terms of service
 

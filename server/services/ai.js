@@ -1,56 +1,127 @@
 import Groq from 'groq-sdk';
 
-const ANALYSIS_PROMPT = `Analyze the following website text for:
-1. Exposure of personal data (emails, phone numbers, IDs, names, addresses)
-2. Potential data leaks or sensitive information (API keys, passwords, internal data)
-3. Legally problematic content (privacy violations, copyright issues, illegal content indicators)
-4. Overall compliance risk level (Low / Medium / High)
+/**
+ * AI Analysis Prompt - System message for legal compliance analysis
+ */
+const SYSTEM_PROMPT = `You are a legal compliance and data privacy expert analyst. Analyze websites for GDPR, CCPA, and general legal compliance. You must evaluate:
 
-Website text to analyze:
----
-{TEXT}
----
+1. SECURITY ANALYSIS:
+   - Personal data exposure (emails, phones, IDs, names, addresses visible on pages)
+   - Potential data leaks (API keys, passwords, internal data, debug info)
+   - Security headers and HTTPS usage
+   - Third-party script risks
 
-Return ONLY valid JSON with this exact structure (no markdown, no explanation, no code blocks):
+2. LEGAL COMPLIANCE ANALYSIS:
+   - Presence and completeness of legal pages (Privacy Policy, Terms of Service, Cookie Policy)
+   - GDPR compliance (consent mechanisms, data rights, DPO contact, lawful basis)
+   - CCPA compliance (Do Not Sell link, consumer rights)
+   - Cookie compliance (consent banner, cookie categorization, opt-out options)
+   - E-commerce compliance (refund policy, return policy, shipping info)
+   - Copyright/DMCA notices
+
+3. LEGAL PAGE QUALITY CHECK (for each found legal page):
+   - Check if Privacy Policy includes: data collection practices, data sharing, retention periods, user rights, contact info
+   - Check if Terms of Service includes: acceptance terms, user obligations, liability limits, dispute resolution, termination
+   - Check if Cookie Policy includes: types of cookies, purposes, third-party cookies, how to manage cookies
+
+Respond ONLY with valid JSON in this exact format:
 {
-  "personal_data": ["list of found personal data items"],
-  "data_leaks": ["list of potential data leak concerns"],
-  "legal_issues": ["list of legal/compliance concerns"],
-  "risk_level": "Low|Medium|High",
-  "summary": "Brief 1-2 sentence summary of findings"
+  "security": {
+    "risk_level": "Low|Medium|High",
+    "score": 0-100,
+    "personal_data_exposure": ["list of issues"],
+    "data_leaks": ["list of issues"],
+    "third_party_risks": ["list of issues"],
+    "recommendations": ["list of security recommendations"]
+  },
+  "legal": {
+    "compliance_level": "Low|Medium|High",
+    "score": 0-100,
+    "pages_found": {"privacy": true/false, "terms": true/false, "cookies": true/false, "gdpr": true/false},
+    "missing_pages": ["list of required but missing pages"],
+    "gdpr_issues": ["list of GDPR compliance issues"],
+    "ccpa_issues": ["list of CCPA compliance issues"],
+    "cookie_compliance": {
+      "has_banner": true/false,
+      "has_consent": true/false,
+      "issues": ["list of cookie compliance issues"]
+    },
+    "privacy_policy_issues": ["list of missing/problematic elements in privacy policy"],
+    "terms_issues": ["list of missing/problematic elements in terms of service"],
+    "recommendations": ["list of legal compliance recommendations"]
+  },
+  "tracking": {
+    "analytics_tools": ["list"],
+    "advertising_networks": ["list"],
+    "data_collection_points": ["list"],
+    "concerns": ["privacy concerns about tracking"]
+  },
+  "summary": "Overall compliance summary"
 }`;
 
 /**
- * Analyzes website text using Groq API
+ * Build the user prompt for AI analysis
  */
-export async function analyzeWithAI(text, domain) {
+function buildUserPrompt(text, domain, legalPages, cookieInfo, trackingInfo) {
+    // Prepare legal pages summary
+    const legalSummary = Object.entries(legalPages)
+        .map(([type, data]) => `${type}: ${data.found ? 'Found' : 'Not Found'}`)
+        .join(', ');
+
+    // Prepare tracking summary
+    const trackingSummary = [
+        ...trackingInfo.analytics.map(t => `Analytics: ${t}`),
+        ...trackingInfo.advertising.map(t => `Advertising: ${t}`),
+        ...trackingInfo.socialMedia.map(t => `Social: ${t}`)
+    ].join(', ') || 'None detected';
+
+    // Prepare legal pages text for analysis (truncated)
+    const legalTexts = Object.entries(legalPages)
+        .filter(([_, data]) => data.found && data.text)
+        .map(([type, data]) => `=== ${type.toUpperCase()} PAGE ===\n${data.text.substring(0, 3000)}`)
+        .join('\n\n');
+
+    return `Analyze this website for legal compliance and security:
+
+DOMAIN: ${domain}
+
+HOMEPAGE CONTENT:
+${text}
+
+LEGAL PAGES STATUS: ${legalSummary}
+
+COOKIE INFO:
+- Cookie Banner: ${cookieInfo.hasCookieBanner ? 'Yes' : 'No'}
+- Consent Mechanism: ${cookieInfo.consentMechanism || 'None detected'}
+- Cookie Types Mentioned: ${cookieInfo.cookieTypes.join(', ') || 'None'}
+
+TRACKING DETECTED: ${trackingSummary}
+
+${legalTexts ? `\nLEGAL PAGE CONTENTS:\n${legalTexts}` : '\nNo legal pages found to analyze.'}`;
+}
+
+/**
+ * Analyzes website using Groq API
+ */
+export async function analyzeWithAI(text, domain, legalPages, cookieInfo, trackingInfo) {
     const apiKey = process.env.GROQ_API_KEY;
 
-    // If no API key, return mock response
+    // Require API key
     if (!apiKey || apiKey === 'your_groq_api_key_here') {
-        console.log('No Groq API key configured, using mock response');
-        return getMockAnalysis(text, domain);
+        throw new Error('GROQ_API_KEY is required to perform analysis');
     }
 
     try {
         const groq = new Groq({ apiKey });
 
-        const prompt = ANALYSIS_PROMPT.replace('{TEXT}', text);
-
         const response = await groq.chat.completions.create({
             model: 'llama-3.3-70b-versatile',
             messages: [
-                {
-                    role: 'system',
-                    content: 'You are a security and compliance analyst. Analyze website content for data privacy and legal compliance issues. Always respond with valid JSON only, no markdown formatting.'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user', content: buildUserPrompt(text, domain, legalPages, cookieInfo, trackingInfo) }
             ],
             temperature: 0.3,
-            max_tokens: 1000
+            max_tokens: 2000
         });
 
         let content = response.choices[0]?.message?.content;
@@ -59,7 +130,7 @@ export async function analyzeWithAI(text, domain) {
             throw new Error('Empty response from AI');
         }
 
-        // Clean up response - remove markdown code blocks if present
+        // Clean up response
         content = content.trim();
         if (content.startsWith('```json')) {
             content = content.slice(7);
@@ -71,7 +142,6 @@ export async function analyzeWithAI(text, domain) {
         }
         content = content.trim();
 
-        // Parse JSON response
         const parsed = JSON.parse(content);
 
         return {
@@ -81,86 +151,6 @@ export async function analyzeWithAI(text, domain) {
 
     } catch (error) {
         console.error('Groq API error:', error.message);
-
-        // Fall back to mock response on error
-        console.log('Falling back to mock response');
-        return getMockAnalysis(text, domain);
+        throw error;
     }
-}
-
-/**
- * Returns a mock analysis response for demo purposes
- */
-function getMockAnalysis(text, domain) {
-    // Simple pattern detection for demo
-    const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-    const phonePattern = /(\+?1?[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
-    const ipPattern = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g;
-
-    const emails = text.match(emailPattern) || [];
-    const phones = text.match(phonePattern) || [];
-    const ips = text.match(ipPattern) || [];
-
-    const personalData = [];
-    const dataLeaks = [];
-    const legalIssues = [];
-
-    // Check for personal data
-    if (emails.length > 0) {
-        personalData.push(`Found ${emails.length} email address(es): ${emails.slice(0, 3).join(', ')}${emails.length > 3 ? '...' : ''}`);
-    }
-    if (phones.length > 0) {
-        personalData.push(`Found ${phones.length} phone number(s)`);
-    }
-
-    // Check for potential data leaks
-    if (ips.length > 0) {
-        dataLeaks.push(`Found ${ips.length} IP address(es) that might be internal`);
-    }
-    if (text.toLowerCase().includes('api_key') || text.toLowerCase().includes('apikey')) {
-        dataLeaks.push('Possible API key reference detected');
-    }
-    if (text.toLowerCase().includes('password') || text.toLowerCase().includes('secret')) {
-        dataLeaks.push('Sensitive keyword detected (password/secret reference)');
-    }
-
-    // Check for legal issues
-    if (!text.toLowerCase().includes('privacy') && !text.toLowerCase().includes('cookie')) {
-        legalIssues.push('No visible privacy policy or cookie notice detected');
-    }
-    if (text.toLowerCase().includes('©') || text.toLowerCase().includes('copyright')) {
-        // This is actually good, but for demo we note it
-    } else {
-        legalIssues.push('No copyright notice found');
-    }
-
-    // Calculate risk level
-    let riskLevel = 'Low';
-    const totalIssues = personalData.length + dataLeaks.length + legalIssues.length;
-
-    if (totalIssues >= 4) {
-        riskLevel = 'High';
-    } else if (totalIssues >= 2) {
-        riskLevel = 'Medium';
-    }
-
-    // If nothing found, add default message
-    if (personalData.length === 0) {
-        personalData.push('No obvious personal data exposure detected');
-    }
-    if (dataLeaks.length === 0) {
-        dataLeaks.push('No obvious data leaks detected');
-    }
-    if (legalIssues.length === 0) {
-        legalIssues.push('Basic compliance elements appear to be in place');
-    }
-
-    return {
-        personal_data: personalData,
-        data_leaks: dataLeaks,
-        legal_issues: legalIssues,
-        risk_level: riskLevel,
-        summary: `Scanned ${domain} homepage. Found ${totalIssues} potential issue(s). Risk level: ${riskLevel}.`,
-        source: 'mock'
-    };
 }

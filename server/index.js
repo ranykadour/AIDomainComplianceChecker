@@ -1,65 +1,53 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { scanDomain } from './services/scanner.js';
+import { scanRoutes, healthRoutes } from './routes/index.js';
 
+// Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.CLIENT_URL || '*',
+    credentials: true
+}));
 app.use(express.json());
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Server is running' });
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
 });
 
-// Main scan endpoint
-app.post('/api/scan', async (req, res) => {
-    try {
-        const { domain } = req.body;
+// Routes
+app.use('/api/health', healthRoutes);
+app.use('/api/scan', scanRoutes);
 
-        if (!domain) {
-            return res.status(400).json({
-                error: 'Domain is required',
-                message: 'Please provide a domain to scan'
-            });
-        }
-
-        // Clean and validate domain
-        const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-        if (!isValidDomain(cleanDomain)) {
-            return res.status(400).json({
-                error: 'Invalid domain',
-                message: 'Please provide a valid domain name'
-            });
-        }
-
-        console.log(`Scanning domain: ${cleanDomain}`);
-
-        const result = await scanDomain(cleanDomain);
-        res.json(result);
-
-    } catch (error) {
-        console.error('Scan error:', error.message);
-        res.status(500).json({
-            error: 'Scan failed',
-            message: error.message || 'An error occurred while scanning the domain'
-        });
-    }
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        error: 'Not found',
+        message: `Route ${req.method} ${req.path} not found`
+    });
 });
 
-// Simple domain validation
-function isValidDomain(domain) {
-    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.[a-zA-Z]{2,}$/;
-    return domainRegex.test(domain) || domain.includes('.');
-}
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    res.status(500).json({
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred'
+    });
+});
 
+// Start server
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Groq API Key: ${process.env.GROQ_API_KEY ? 'Configured' : 'Not configured (using mock responses)'}`);
+    console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`🔍 Scan endpoint: POST http://localhost:${PORT}/api/scan`);
+    console.log(`🤖 Groq API: ${process.env.GROQ_API_KEY ? 'Configured' : 'Not configured (using pattern analysis)'}`);
+    console.log('');
 });
