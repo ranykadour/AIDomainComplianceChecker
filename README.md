@@ -249,4 +249,32 @@ MIT License - This is a demo/educational project.
 
 ---
 
+## 🚀 Deployment to Vercel
+
+Since this project has a separate Frontend and Backend, you will deploy them as **two separate projects** in Vercel, pointing to the same repository.
+
+### 1. Deploy the Backend (Server)
+1.  Go to Vercel Dashboard and click **"Add New..."** -> **"Project"**.
+2.  Import this repository.
+3.  **Configure Project:**
+    -   **Project Name:** e.g., `compliance-checker-server`
+    -   **Root Directory:** Click "Edit" and select `server`.
+    -   **Framework Preset:** Select "Other".
+    -   **Environment Variables:** Add `GROQ_API_KEY` (and `CLIENT_URL` if you want to restrict CORS).
+4.  Click **Deploy**.
+5.  **Copy the Domain:** Once deployed, copy the assigned domain (e.g., `https://compliance-checker-server.vercel.app`).
+
+### 2. Deploy the Frontend (Client)
+1.  Go to Vercel Dashboard and click **"Add New..."** -> **"Project"**.
+2.  Import the same repository again.
+3.  **Configure Project:**
+    -   **Project Name:** e.g., `compliance-checker-client`
+    -   **Root Directory:** Click "Edit" and select `client`.
+    -   **Framework Preset:** Vite (should be detected automatically).
+4.  **Important:** You need to tell the frontend where the backend is.
+    -   Since Vite proxies don't work in production, you might need to update the API calls in `client/src/App.jsx` to point to your new Backend URL, OR set up a rewrite in `client/vercel.json` (which is already configured to proxy `/api` locally, but for production you often need an environment variable).
+    -   **Quick Fix:** Add an Environment Variable `VITE_API_URL` = `https://your-backend-url.vercel.app` and update the Axios setup.
+
+---
+
 **Note**: This tool is for educational and demonstration purposes only. Always obtain proper authorization before scanning websites you don't own.

@@ -15,7 +15,8 @@ function App() {
         setScanResult(null);
 
         try {
-            const response = await axios.post('/api/scan', { domain, siteOptions });
+            const apiUrl = import.meta.env.VITE_API_URL || '';
+            const response = await axios.post(`${apiUrl}/api/scan`, { domain, siteOptions });
             setScanResult(response.data);
         } catch (err) {
             setError(err.response?.data?.message || err.message || 'An error occurred while scanning');

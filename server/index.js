@@ -44,10 +44,15 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-    console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`🔍 Scan endpoint: POST http://localhost:${PORT}/api/scan`);
-    console.log(`🤖 Groq API: ${process.env.GROQ_API_KEY ? 'Configured' : 'Not configured (using pattern analysis)'}`);
-    console.log('');
-});
+// Start server if running directly
+if (process.env.NODE_ENV !== 'production' || process.argv[1] === new URL(import.meta.url).pathname) {
+    app.listen(PORT, () => {
+        console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+        console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
+        console.log(`🔍 Scan endpoint: POST http://localhost:${PORT}/api/scan`);
+        console.log(`🤖 Groq API: ${process.env.GROQ_API_KEY ? 'Configured' : 'Not configured (using pattern analysis)'}`);
+        console.log('');
+    });
+}
+
+export default app;
