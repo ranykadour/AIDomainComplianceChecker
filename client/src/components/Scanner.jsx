@@ -93,7 +93,7 @@ function Scanner({ onScan, isLoading }) {
             {showOptions && (
                 <div className="website-options">
                     <p className="options-description">
-                        Select what applies to your website. This helps provide more accurate compliance scores by not penalizing you for requirements that don't apply.
+                        Select what applies to your website. This helps provide more accurate compliance scores by not penalizing you for requirements that don&apos;t apply.
                     </p>
                     <div className="options-grid">
                         {websiteOptions.map((option) => (

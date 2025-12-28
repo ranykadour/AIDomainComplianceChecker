@@ -71,7 +71,6 @@ A comprehensive web application that scans websites for legal compliance issues,
 │   ├── scan.js             # Main scan endpoint
 │   └── health.js           # Health check endpoint
 │
-├── package.json            # Root package.json with dev scripts
 └── README.md
 ```
 
@@ -90,10 +89,18 @@ A comprehensive web application that scans websites for legal compliance issues,
    cd AIDomainComplianceChecker
    ```
 
-2. **Install all dependencies:**
+2. **Install dependencies for Server:**
 
    ```bash
-   npm run install:all
+   cd server
+   npm install
+   ```
+
+3. **Install dependencies for Client:**
+
+   ```bash
+   cd ../client
+   npm install
    ```
 
 3. **(Optional) Configure Groq API:**
@@ -106,13 +113,7 @@ A comprehensive web application that scans websites for legal compliance issues,
 
 ### Running the Application
 
-**Option 1: Run both servers together (recommended)**
-
-```bash
-npm run dev
-```
-
-**Option 2: Run servers separately**
+**Run servers separately**
 
 Terminal 1 - Backend:
 
